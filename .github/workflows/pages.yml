@@ -51,3 +51,28 @@ jobs:
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Confirmar Hub público
+        run: |
+          set -e
+          URL="https://8w2jh948cw-sudo.github.io/Bugado-/"
+          sleep 4
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -L -sS -o /tmp/hub.html -w '%{http_code}' --connect-timeout 10 --max-time 20 "$URL" || true)
+            echo "[$attempt] $URL -> HTTP $code / $(wc -c < /tmp/hub.html 2>/dev/null || echo 0) bytes"
+            if [ "$code" = "200" ] && grep -q 'Menu seguro das versões e ferramentas' /tmp/hub.html; then
+              ok=1
+              break
+            fi
+            sleep 4
+          done
+          if [ "$ok" != "1" ]; then
+            echo 'Hub público não corresponde ao arquivo publicado:'
+            sed -n '1,80p' /tmp/hub.html 2>/dev/null || true
+            exit 1
+          fi
+          grep -q "TARGET_PATH='/Controle-financeiro/'" /tmp/hub.html
+          ! grep -q 'localStorage.clear' /tmp/hub.html
+          ! grep -q 'indexedDB.deleteDatabase' /tmp/hub.html
+          echo '[OK] Hub externo está público e fora do escopo /Controle-financeiro/.'
