@@ -1,0 +1,53 @@
+name: Publicar Hub Seguro Meu Dinheiro
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-hub-financeiro
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar Hub
+        run: |
+          set -e
+          test -s index.html
+          grep -q 'Meu Dinheiro' index.html
+          grep -q "TARGET_PATH='/Controle-financeiro/'" index.html
+          grep -q 'navigator.serviceWorker.getRegistrations' index.html
+          grep -q 'caches.keys' index.html
+          ! grep -q 'localStorage.clear' index.html
+          ! grep -q 'indexedDB.deleteDatabase' index.html
+          grep -q '/Controle-financeiro/beta/' index.html
+          grep -q '/Controle-financeiro/diagnostico/' index.html
+          grep -q '/Controle-financeiro/safe.html' index.html
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Enviar site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
